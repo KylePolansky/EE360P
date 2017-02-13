@@ -1,7 +1,4 @@
-/*
- * EID's of group members
- * 
- */
+//EIDS=KPP446,JC82563
 import java.util.concurrent.Semaphore; // for implementation using Semaphores
 
 public class CyclicBarrier {

@@ -1,3 +1,4 @@
+//EIDS=KPP446,JC82563
 public class testBarrier implements Runnable {
 	final static int SIZE = 5;
 	final static int ROUND = 5;
