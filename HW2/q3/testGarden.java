@@ -8,12 +8,31 @@ public class testGarden {
         Garden garden = new Garden();
         //should stop at 4;
         Thread t = new Thread(new Newton(garden, 1000));
-        t.run();
+        t.start();
         Thread.sleep(100);
         Assert.assertTrue(garden.totalHolesDugByNewton() == 4);
     }
 
+    @Test
+    public void DoAllThree() throws InterruptedException {
+        Garden garden = new Garden();
+        Thread t = new Thread(new Newton(garden,1000));
+        Thread t1 = new Thread(new Benjamin(garden, 1000));
+        Thread t2 = new Thread(new Mary(garden, 1000));
+        t.start();
+        Thread.sleep(333);
+        t1.start();
+        Thread.sleep(333);
+        t2.start();
+        for (int i = 0; i < 100; i++) {
+            Thread.sleep(1000);
+            printStats(garden);
+        }
+    }
 
+    private void printStats(Garden garden) {
+        System.out.println("Dug: " + garden.totalHolesDugByNewton() + " ; Seeded: " + garden.totalHolesSeededByBenjamin() + " ; Filled: " + garden.totalHolesFilledByMary());
+    }
     //Digs hole
     private class Newton implements Runnable {
 
@@ -107,7 +126,7 @@ public class testGarden {
                     e.printStackTrace();
                 }
 
-                garden.doneDigging();
+                garden.doneFilling();
                 System.out.println("Done Filling. Thread: " + Thread.currentThread().getId());
             }
         }
