@@ -1,20 +1,25 @@
 //EIDS=KPP446,JC82563
 
-import java.util.concurrent.; // for implementation using Semaphores
-
 public class MonitorCyclicBarrier {
     private int parties;
     private int index;
-    private int count;
 
     public MonitorCyclicBarrier(int parties) {
         this.parties = parties;
         index = parties - 1;
     }
 
-    public int await() throws InterruptedException {
+    public synchronized int await() throws InterruptedException {
         int myIndex = index;
+        index--;
 
+        if(index >= 0){
+            this.wait();
+        }
+        else{
+            index=parties - 1;
+            notifyAll();
+        }
 
         return myIndex;
     }
