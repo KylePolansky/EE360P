@@ -1,7 +1,6 @@
 
 /*
- * EID's of group members
- * 
+ * EIDS=KPP446,JC82563
  */
 import java.util.concurrent.Semaphore; // for implementation using Semaphores
 
@@ -12,31 +11,38 @@ public class CyclicBarrier {
         private int parties;
         private int index;
         private int count;
+        
 	public CyclicBarrier(int parties) {
             this.parties=parties;
             index=parties-1;
         }
 	
 	public int await() throws InterruptedException {
-           mutex.acquire();
-           count++;
-           int myIndex = index;
-           index--;
-           if (count==parties){
-               s1.release();
-           }
-           mutex.release();
-           
-           s1.acquire();
-           s1.release();
-           
-           mutex.acquire();
-           
-           count--;
-           index++;
-           
-           mutex.release();
-          // you need to write this code
+            mutex.acquire();
+            count++;
+            int myIndex = index;
+            index--;
+            if (count==parties){
+                s2.acquire();
+                s1.release();
+            }
+            mutex.release();
+
+            s1.acquire();
+            s1.release();
+
+            mutex.acquire();
+            count--;
+            index++;
+            if (count == 0) {
+              s1.acquire();
+              s2.release();
+            }
+            mutex.release();
+            
+            s2.acquire();
+            s2.release();
+            // you need to write this code
 	    return myIndex;
 	}
 }
