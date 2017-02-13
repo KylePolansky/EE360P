@@ -18,26 +18,26 @@ hs_err_pid*
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 
 # User-specific stuff:
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/dictionaries
-.idea/vcs.xml
-.idea/jsLibraryMappings.xml
+*/.idea/workspace.xml
+*/.idea/tasks.xml
+*/.idea/dictionaries
+*/.idea/vcs.xml
+*/.idea/jsLibraryMappings.xml
 
 # Sensitive or high-churn files:
-.idea/dataSources.ids
-.idea/dataSources.xml
-.idea/dataSources.local.xml
-.idea/sqlDataSources.xml
-.idea/dynamic.xml
-.idea/uiDesigner.xml
+*/.idea/dataSources.ids
+*/.idea/dataSources.xml
+*/.idea/dataSources.local.xml
+*/.idea/sqlDataSources.xml
+*/.idea/dynamic.xml
+*/.idea/uiDesigner.xml
 
 # Gradle:
-.idea/gradle.xml
-.idea/libraries
+*/.idea/gradle.xml
+*/.idea/libraries
 
 # Mongo Explorer plugin:
-.idea/mongoSettings.xml
+*/.idea/mongoSettings.xml
 
 ## File-based project format:
 *.iws
@@ -48,7 +48,7 @@ hs_err_pid*
 /out/
 
 # mpeltonen/sbt-idea plugin
-.idea_modules/
+*/.idea_modules/
 
 # JIRA plugin
 atlassian-ide-plugin.xml
@@ -62,8 +62,8 @@ fabric.properties
 ### Intellij Patch ###
 # Comment Reason: https://github.com/joeblau/gitignore.io/issues/186#issuecomment-215987721
 
-# *.iml
-# modules.xml
-# .idea/misc.xml
-# *.ipr
+*.iml
+modules.xml
+*/.idea/misc.xml
+*.ipr
 /bin/
