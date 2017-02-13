@@ -1,8 +1,9 @@
 
+//EIDS=KPP446,JC82563 
+
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-//EIDS=KPP446,JC82563 
 public class Garden {
     int dugHoles;
     int seededHoles;
@@ -23,7 +24,6 @@ public class Garden {
     public void startDigging() throws InterruptedException {
         lock.lock();
         try {
-            System.out.println("Holes Dug: " + totalHolesDugByNewton() + " ; Holes Seeded: " + totalHolesSeededByBenjamin());
             while ((totalHolesDugByNewton() - totalHolesSeededByBenjamin()) >= 4)
                 notSeededHoles.await();
             while ((totalHolesDugByNewton() - totalHolesFilledByMary()) >= 8)
