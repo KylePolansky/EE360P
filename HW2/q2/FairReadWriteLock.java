@@ -1,8 +1,9 @@
+//EIDS=KPP446,JC82563
+
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-//EIDS=KPP446,JC82563
 public class FairReadWriteLock {
     private class Timestamp{
         int timestamp;

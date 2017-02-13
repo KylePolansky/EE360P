@@ -1,7 +1,4 @@
-
-/*
- * EIDS=KPP446,JC82563
- */
+//EIDS=KPP446,JC82563
 import java.util.concurrent.Semaphore; // for implementation using Semaphores
 
 public class CyclicBarrier {
@@ -42,7 +39,6 @@ public class CyclicBarrier {
             
             s2.acquire();
             s2.release();
-            // you need to write this code
 	    return myIndex;
 	}
 }
