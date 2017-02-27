@@ -40,7 +40,6 @@ public class Server {
         Thread tcpThread = new Thread(new Runnable(){
             @Override
             public void run() {
-                String clientSentence;
                 ServerSocket welcomeSocket;
                 try{
                     welcomeSocket = new ServerSocket(tcpPort);
@@ -49,16 +48,26 @@ public class Server {
                     {
                        try{
                             Socket connectionSocket = welcomeSocket.accept();
-                            BufferedReader inFromClient =
-                                new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
-                            DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
-                            clientSentence = inFromClient.readLine();
-                            String response;
-                            //DO SOMETHING WITH MESSAGE
-                                                        
-                            response=handleRequest(clientSentence);
-                            //Send response to client
-                            outToClient.writeBytes(response);
+                            new Thread(new Runnable(){
+                                @Override
+                                public void run() {
+                                    try{
+                                        BufferedReader inFromClient =
+                                        new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
+                                        DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
+                                        String clientSentence = inFromClient.readLine();
+
+                                        String response=handleRequest(clientSentence);
+                                        //Send response to client
+                                        outToClient.writeBytes(response);
+                                    }catch(IOException e){
+                                        System.out.println("IOException in TCP Server Thread.");
+                                        e.printStackTrace();
+                                    }
+                                }
+                                
+                            }).start();
+                            
                        }catch(IOException e){
                            System.out.println("IOException in TCP Server Thread.");
                            e.printStackTrace();
@@ -76,27 +85,36 @@ public class Server {
                 try{
                     DatagramSocket serverSocket = new DatagramSocket(udpPort);
                     byte[] receiveData = new byte[1024];
-                    byte[] sendData = new byte[1024];
+                    
                 
                     while(true)
                     {
-                       try{
-                            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-                            serverSocket.receive(receivePacket);
-                            String clientSentence = new String( receivePacket.getData());
+                        DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                        serverSocket.receive(receivePacket);
+                        new Thread(new Runnable(){
+                            @Override
+                            public void run() {
+                                try{
 
-                            InetAddress IPAddress = receivePacket.getAddress();
-                            int port = receivePacket.getPort();
-                            String response=handleRequest(clientSentence);
-                            sendData = response.getBytes();
-                            DatagramPacket sendPacket =
-                            new DatagramPacket(sendData, sendData.length, IPAddress, port);
-                            serverSocket.send(sendPacket);
+                                    byte[] sendData = new byte[1024];
+                                    String clientSentence = new String( receivePacket.getData());
 
-                       }catch(IOException e){
-                           System.out.println("IOException in TCP Server Thread.");
-                           e.printStackTrace();
-                       }
+                                    InetAddress IPAddress = receivePacket.getAddress();
+                                    int port = receivePacket.getPort();
+                                    String response=handleRequest(clientSentence);
+                                    sendData = response.getBytes();
+                                    DatagramPacket sendPacket =
+                                    new DatagramPacket(sendData, sendData.length, IPAddress, port);
+
+                                    serverSocket.send(sendPacket);
+                                }catch(IOException e){
+                                    System.out.println("IOException in UDP Server Thread.");
+                                    e.printStackTrace();
+                                }
+                            }
+
+                        }).start();
+
                     }
                 }catch(IOException e){
                     System.out.println("Failed to start TCP server in port "+tcpPort);
