@@ -1,23 +1,11 @@
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- *
- * @author super
- */
 public class ProductHandler {
     
     Map<String,Integer> inventory; //Map Product->Quantity
-    //Map<String,Collection<Order>> orderHistory = new HashMap(); //Map User->Order History
-    Map<Integer,Order> allOrders = new HashMap();
+    Map<Integer,Order> allOrders = new HashMap(); //Map Order Number->Order
     int nextId=1;
 
     public ProductHandler(Map<String, Integer> inventory) {
@@ -26,7 +14,7 @@ public class ProductHandler {
     
     public synchronized int purchase(String user, String product, int quantity) throws ProductNotFoundException,NotEnoughException
     {
-        if(!inventory.containsKey(product))
+	    if(!inventory.containsKey(product))
             throw new ProductNotFoundException();
         if(inventory.get(product)<quantity)
             throw new NotEnoughException();
@@ -35,13 +23,6 @@ public class ProductHandler {
         
         int orderId = getOrderId();
         Order order = new Order(user,orderId,product,quantity);
-        /*
-        Collection<Order> userOrders = orderHistory.get(user);
-        if(userOrders==null)
-            userOrders=new ArrayList();
-        userOrders.add(order);
-        orderHistory.put(user,userOrders);
-        */
         allOrders.put(orderId,order);
         return orderId;
     }
