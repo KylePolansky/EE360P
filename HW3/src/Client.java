@@ -60,7 +60,7 @@ public class Client {
 				}
 				if (response != null) System.out.println(response);
 			} else {
-				if (debug) System.out.println("DEBUG: ERROR: No such command");
+				System.out.println("ERROR: No such command");
 			}
 		}
 	}
