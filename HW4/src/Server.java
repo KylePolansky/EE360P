@@ -126,19 +126,12 @@ public class Server {
 							}
 						}
 						clientSocket.close();
+						return;
 					}
 					else {
-						if (debug && !inputString.equals("keepalive")) System.out.println("DEBUG: Client message: " + inputString);
+						if (debug) System.out.println("DEBUG: Client message: " + inputString);
 						//Client Request
-						if (!inputString.split(" ")[0].equals("keepalive")) {
-							Mutex.sendRequest(inputString, output);
-						}
-
-						//always ack to ensure client does not think server goes down if cs takes longer than 100ms
-						String outputText = "ack\n";
-						output.writeBytes(outputText);
-						output.flush();
-						//if (debug) System.out.println("DEBUG: Sending output to client: " + outputText);
+						Mutex.sendRequest(inputString, output);
 					}
 				}
 			} catch (IOException e) {

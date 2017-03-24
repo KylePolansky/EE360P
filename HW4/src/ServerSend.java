@@ -54,6 +54,7 @@ public class ServerSend implements Runnable {
 			//TODO: handle response
 
 			sock.close();
+			return;
 
 		} catch (IOException e) {
 			if (Server.debug) System.out.println("DEBUG: Cannot Connect to server: " + serverID);
