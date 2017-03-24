@@ -33,17 +33,16 @@ public class ServerSend implements Runnable {
 			output.flush();
 			if (Server.debug) System.out.println("DEBUG: Sending output to server: " + outputText);
 
-			String response = input.readLine();
-			if (Server.debug) System.out.println("DEBUG: Response from server: " + outputText);
-
 			switch (commandType) {
 				case REQUEST:
+					String response = input.readLine();
+					if (Server.debug) System.out.println("DEBUG: Response from server: " + outputText);
 					int responseServerID = Integer.parseInt(response.split(" ")[0]);
 					int responseTimeStamp = Integer.parseInt(response.split(" ")[1]);
-					if (responseTimeStamp < Server.Mutex.getTimeStamp()) {
+					if (responseTimeStamp < Server.Mutex.myTimestamp.get()) {
 						Server.ServerList.requestCanEnter = false;
 					}
-					else if (responseTimeStamp == Server.Mutex.getTimeStamp()) {
+					else if (responseTimeStamp == Server.Mutex.myTimestamp.get()) {
 						Server.ServerList.requestCanEnter = responseServerID > Server.myID;
 					}
 					Server.ServerList.requestResponses.incrementAndGet();
@@ -57,7 +56,8 @@ public class ServerSend implements Runnable {
 			sock.close();
 
 		} catch (IOException e) {
-			if (Server.debug) System.out.println("DEBUG: Cannot Connect to server " + e.getStackTrace());
+			if (Server.debug) System.out.println("DEBUG: Cannot Connect to server: " + serverID);
+			e.printStackTrace();
 			Server.ServerList.SetServerCrashed(serverID);
 
 			switch (commandType) {

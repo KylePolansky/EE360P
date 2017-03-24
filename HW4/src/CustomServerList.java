@@ -33,7 +33,7 @@ class CustomServerList {
 		requestResponses = new AtomicInteger(0);
 		requestCanEnter = true;
 		int requestsNeeded = (int) getCustomServerList().stream().filter(s -> !s.isCrashed()).count() - 1;
-		String finalCommand = Server.myID + " " + Server.Mutex.getTimeStamp() + " " + "REQUEST";
+		String finalCommand = Server.myID + " " + Server.Mutex.myTimestamp.get() + " " + "REQUEST";
 
 		//Get response for valid threads
 		getCustomServerList().stream()

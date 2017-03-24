@@ -8,6 +8,7 @@ import java.util.PriorityQueue;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Server {
 	public static final boolean debug = true;
@@ -159,22 +160,25 @@ public class Server {
 	// 0 1 RELEASE purchase Tim phone 10
 
 	static class Mutex {
-		private static int myTimestamp;
+		public static AtomicInteger myTimestamp = new AtomicInteger(0);
+		final static Object timestampLock = null;
 		private static PriorityQueue<MutexRequest> pq = new PriorityQueue<>();
 
 		private synchronized static void sendRequest(String command, DataOutputStream outputStream) {
-			myTimestamp = myTimestamp + 1;
-			MutexRequest request = new MutexRequest(Server.myID, myTimestamp, command, outputStream);
+			myTimestamp.getAndIncrement();
+			MutexRequest request = new MutexRequest(Server.myID, myTimestamp.get(), command, outputStream);
 			pq.add(request);
 			if (ServerList.SendAllServersRequest() && pq.peek().ServerID == myID) {
 				processNextRequest();
 			}
 		}
 
-		private synchronized static void processNextRequest() {
+		private static void processNextRequest() {
 			MutexRequest request = pq.poll();
 			String response = ph.handleRequest(request.command);
+			response = response + "end\n";
 			try {
+				if (debug) System.out.println("DEBUG: Sending output to client: " + response);
 				request.outputStream.writeBytes(response);
 				request.outputStream.flush();
 				request.outputStream.close();
@@ -187,21 +191,17 @@ public class Server {
 
 		private synchronized static int receiveRequest(MutexRequest request) {
 			pq.add(request);
-			myTimestamp = Math.max(request.TimeStamp, myTimestamp)+1;
-			return myTimestamp;
+			myTimestamp.set(Math.max(request.TimeStamp, myTimestamp.get()) + 1);
+			return myTimestamp.get();
 		}
 
 		public synchronized static void receiveRelease(MutexRequest request) {
-			myTimestamp = Math.max(request.TimeStamp, myTimestamp)+1;
+			myTimestamp.set(Math.max(request.TimeStamp, myTimestamp.get())+1);
 			ph.handleRequest(request.command);
 			pq.removeIf(r -> r.TimeStamp == request.TimeStamp && r.ServerID == request.ServerID);
 			if (pq.peek().ServerID == myID) {
 				processNextRequest();
 			}
-		}
-
-		public synchronized static int getTimeStamp() {
-			return myTimestamp;
 		}
 	}
 }

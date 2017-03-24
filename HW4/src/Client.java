@@ -26,7 +26,7 @@ public class Client {
 			String cmd = sc.nextLine();
 			String[] tokens = cmd.split(" ");
 
-			switch(tokens[0]) {
+			switch (tokens[0]) {
 				case "purchase":
 				case "cancel":
 				case "search":
@@ -45,6 +45,7 @@ public class Client {
 		static Socket clientSocket;
 		static DataOutputStream outStream;
 		static int responseReceived; // 0 = no response, 1 = need to resend, 2 = got response.
+		private static Thread TCPListenerThread;
 
 		public ClientNetworking(ArrayList<URI> servers) {
 			serverList = servers;
@@ -53,7 +54,10 @@ public class Client {
 		}
 
 		public static void Connect() throws IOException {
-			new Thread(new TCPListener()).start();
+			TCPListenerThread = new Thread(new TCPListener());
+			TCPListenerThread.start();
+			while (clientSocket == null || !clientSocket.isConnected());
+			SendKeepAlive();
 		}
 
 		static synchronized void Send(String cmd) {
@@ -61,8 +65,9 @@ public class Client {
 		}
 
 		//TODO: This should be synchronized somehow.
-		static class SendThread implements Runnable{
+		static class SendThread implements Runnable {
 			private String cmd;
+
 			public SendThread(String cmd) {
 				this.cmd = cmd;
 			}
@@ -71,10 +76,14 @@ public class Client {
 			public void run() {
 				if (debug && !cmd.equals("keepalive")) System.out.println("DEBUG: Sending TCP Command: " + cmd);
 
-				//Wait for socket to connect
-				while (clientSocket == null || !clientSocket.isConnected()) ;
-
 				responseReceived = 0;
+				while (clientSocket == null || !clientSocket.isConnected()) {
+					try {
+						Connect();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
 				output();
 
 				Thread.yield();
@@ -91,12 +100,18 @@ public class Client {
 			private void output() {
 				try {
 					synchronized (outStream) {
+						while (outStream == null);
 						outStream.writeBytes(cmd + '\n');
 						outStream.flush();
 					}
 				} catch (IOException e) {
 					e.printStackTrace();
 					responseReceived = 1;
+					try {
+						Connect();
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
 				}
 			}
 		}
@@ -119,18 +134,24 @@ public class Client {
 						try {
 							while ((line = reader.readLine()) != null && clientSocket != null && clientSocket.isConnected()) {
 								line = line.trim();
-								if (debug && !line.equals("ack")) System.out.println("DEBUG: Received message: " + line);
+								if (debug && !line.equals("ack"))
+									System.out.println("DEBUG: Received message: " + line);
 
+								responseReceived = 2;
 								if (line.equals("ack")) {
 									SendKeepAlive();
-								}
-								else {
+								} else {
 									System.out.println(line.trim());
 								}
-								responseReceived = 2;
+
+								if (line.equals("end")) {
+									clientSocket.close();
+									return;
+								}
 							}
 						} catch (IOException e) {
-							if (debug) System.out.println("DEBUG: Error in TCPListener Receive, trying new server: " + e.getMessage());
+							if (debug)
+								System.out.println("DEBUG: Error in TCPListener Receive, trying new server: " + e.getMessage());
 							clientSocket = null;
 							responseReceived = 1;
 						}
@@ -138,9 +159,12 @@ public class Client {
 				}
 			}
 
-			private synchronized void Connect() {
+			private synchronized static void Connect() {
 				while (clientSocket == null || !clientSocket.isConnected()) {
 					try {
+						clientSocket = null;
+						reader = null;
+						outStream = null;
 						int oldServer = serverToUse;
 						serverToUse = (serverToUse + 1) % serverList.size();
 						clientSocket = new Socket();
@@ -154,8 +178,6 @@ public class Client {
 						reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 						if (debug) System.out.println("DEBUG: Setting output reader on server: " + oldServer);
 						outStream = new DataOutputStream(clientSocket.getOutputStream());
-						if (debug) System.out.println("DEBUG: Sending keepalive to server: " + oldServer);
-						SendKeepAlive();
 					} catch (IOException e) {
 						if (debug) System.out.println("DEBUG: Error in TCPListener.Connect: " + e.getStackTrace());
 					}
