@@ -35,17 +35,19 @@ public class Server {
 
 		ServerList = new CustomServerList(slist);
 		int listenPort = ServerList.getCustomServerList().stream().filter(s -> s.getID() == myID).findFirst().get().getUri().getPort();
-		new Thread(new ServerListener(listenPort));
+		if (debug) System.out.println("[DEBUG] starting listener on port: " + listenPort);
+		new Thread(new ServerListener(listenPort)).start();
+
+		if (debug) System.out.println("[DEBUG] parsing inventory");
 
 		ph = new ProductHandler();
 		ph.readInventory(inventoryPath);
 
-		while (true) {
+		if (debug) System.out.println("[DEBUG] Server Running");
 
+		while (true) {
 		}
 	}
-
-
 
 	static class ServerListener implements Runnable {
 		ServerSocket sock;
@@ -62,7 +64,7 @@ public class Server {
 				Socket clientSocket = null;
 				try {
 					clientSocket = sock.accept();
-					clientSocket.setSoTimeout(100);
+					clientSocket.setSoTimeout(Client.timeout);
 					es.submit(new ServerSocketHandler(clientSocket));
 				} catch (IOException e) {
 					System.out.println("Error accepting new client socket") ;
@@ -93,42 +95,50 @@ public class Server {
 
 				while (clientSocket.isConnected()) {
 					String inputString = input.readLine();
+					if (debug && !inputString.equals("keepalive")) System.out.println("DEBUG: Received message: " + inputString);
 
 					if (inputString.split(" ")[0].matches("\\d+$")) {
+						if (debug && !inputString.equals("keepalive")) System.out.println("DEBUG: Server message: " + inputString);
 						//Server Request
 						int requestServerID = Integer.parseInt(inputString.split(" ")[0]);
 						int requestTimeStamp = Integer.parseInt(inputString.split(" ")[1]);
 						String requestCommand = inputString.split(" ")[2];
 
-						switch (requestCommand) {
-							case "REQUEST":
-								int responseClock = Mutex.receiveRequest(new MutexRequest(requestServerID, requestTimeStamp, ""));
-								output.writeBytes(myID + " " + responseClock + " ACK\n");
-								output.flush();
-								break;
-							case "RELEASE":
-								String command = "";
-								for (int i = 3; i < inputString.split(" ").length; i++) {
-									command = command + inputString.split(" ")[i] + " ";
-								}
-								command = command.trim();
+						if (!(requestServerID == myID)) {
+							switch (requestCommand) {
+								case "REQUEST":
+									int responseClock = Mutex.receiveRequest(new MutexRequest(requestServerID, requestTimeStamp, ""));
+									String outputText = myID + " " + responseClock + " ACK\n";
+									output.writeBytes(outputText);
+									output.flush();
+									if (debug) System.out.println("DEBUG: Sending output to server: " + outputText);
+									break;
+								case "RELEASE":
+									String command = "";
+									for (int i = 3; i < inputString.split(" ").length; i++) {
+										command = command + inputString.split(" ")[i] + " ";
+									}
+									command = command.trim();
 
-								Mutex.receiveRelease(new MutexRequest(requestServerID, requestTimeStamp, command));
-								break;
+									Mutex.receiveRelease(new MutexRequest(requestServerID, requestTimeStamp, command));
+									break;
+							}
 						}
 						clientSocket.close();
 					}
 					else {
+						if (debug && !inputString.equals("keepalive")) System.out.println("DEBUG: Client message: " + inputString);
 						//Client Request
-						if (!inputString.split(" ").equals("keepalive")) {
+						if (!inputString.split(" ")[0].equals("keepalive")) {
 							Mutex.sendRequest(inputString, output);
 						}
 
 						//always ack to ensure client does not think server goes down if cs takes longer than 100ms
-						output.writeBytes("ack\n");
+						String outputText = "ack\n";
+						output.writeBytes(outputText);
 						output.flush();
+						//if (debug) System.out.println("DEBUG: Sending output to client: " + outputText);
 					}
-
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -183,6 +193,7 @@ public class Server {
 
 		public synchronized static void receiveRelease(MutexRequest request) {
 			myTimestamp = Math.max(request.TimeStamp, myTimestamp)+1;
+			ph.handleRequest(request.command);
 			pq.removeIf(r -> r.TimeStamp == request.TimeStamp && r.ServerID == request.ServerID);
 			if (pq.peek().ServerID == myID) {
 				processNextRequest();

@@ -1,8 +1,9 @@
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 class CustomServerList {
 	private ArrayList<CustomServer> customServerList;
-	public int requestResponses;
+	public AtomicInteger requestResponses;
 	public boolean requestCanEnter;
 
 	public CustomServerList(ArrayList<CustomServer> customServerList) {
@@ -18,17 +19,18 @@ class CustomServerList {
 	}
 
 	public synchronized boolean SendAllServersRequest() {
-		requestResponses = 0;
+		requestResponses = new AtomicInteger(0);
 		requestCanEnter = true;
 		int requestsNeeded = (int) getCustomServerList().stream().filter(s -> !s.isCrashed()).count() - 1;
 		String finalCommand = Server.myID + " " + Server.Mutex.getTimeStamp() + " " + "REQUEST";
 
 		//Get response for valid threads
 		getCustomServerList().stream()
-				.filter(s -> !s.isCrashed())
+				.filter(s -> !s.isCrashed() && s.getID() != Server.myID)
 				.forEach(s -> new Thread(new ServerSend(s.getID(), finalCommand, ServerSendType.REQUEST)).start());
 
-		while (requestsNeeded < requestResponses);
+		while (requestsNeeded > requestResponses.get()) {
+		}
 		return requestCanEnter;
 	}
 
@@ -37,7 +39,7 @@ class CustomServerList {
 
 		//Get response for valid threads
 		getCustomServerList().stream()
-				.filter(s -> !s.isCrashed())
+				.filter(s -> !s.isCrashed() && s.getID() != Server.myID)
 				.forEach(s -> new Thread(new ServerSend(s.getID(), finalCommand, ServerSendType.REQUEST)).start());
 	}
 }

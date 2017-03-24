@@ -22,16 +22,20 @@ public class ServerSend implements Runnable {
 
 		try {
 			Socket sock = new Socket();
-			sock.connect(new InetSocketAddress(server.getUri().getHost() , server.getUri().getPort()),100);
-			sock.setSoTimeout(100);
+			sock.connect(new InetSocketAddress(server.getUri().getHost() , server.getUri().getPort()),Client.timeout);
+			sock.setSoTimeout(Client.timeout);
 
 			BufferedReader input = new BufferedReader(new InputStreamReader(sock.getInputStream()));
 			DataOutputStream output = new DataOutputStream(sock.getOutputStream());
 
-			output.writeBytes(sendCommand + "\n");
+			String outputText = sendCommand + "\n";
+			output.writeBytes(outputText);
 			output.flush();
+			if (Server.debug) System.out.println("DEBUG: Sending output to server: " + outputText);
 
 			String response = input.readLine();
+			if (Server.debug) System.out.println("DEBUG: Response from server: " + outputText);
+
 			switch (commandType) {
 				case REQUEST:
 					int responseServerID = Integer.parseInt(response.split(" ")[0]);
@@ -42,7 +46,7 @@ public class ServerSend implements Runnable {
 					else if (responseTimeStamp == Server.Mutex.getTimeStamp()) {
 						Server.ServerList.requestCanEnter = responseServerID > Server.myID;
 					}
-					Server.ServerList.requestResponses = Server.ServerList.requestResponses + 1;
+					Server.ServerList.requestResponses.incrementAndGet();
 					break;
 				case RELEASE:
 					//No response needed
@@ -58,7 +62,7 @@ public class ServerSend implements Runnable {
 
 			switch (commandType) {
 				case REQUEST:
-					Server.ServerList.requestResponses = Server.ServerList.requestResponses + 1;
+					Server.ServerList.requestResponses.incrementAndGet();
 					break;
 				case RELEASE:
 					//No response needed
