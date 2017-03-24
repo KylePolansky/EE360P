@@ -14,6 +14,17 @@ class CustomServerList {
 		return customServerList;
 	}
 
+	public CustomServer getServerByID(int id) {
+
+		for (CustomServer s : customServerList) {
+			if (s.getID() == id) {
+				return s;
+			}
+		}
+
+		return null;
+	}
+
 	public synchronized void SetServerCrashed(int serverID) {
 		getCustomServerList().stream().filter(s -> s.getID() == serverID).findFirst().get().setCrashed(true);
 	}

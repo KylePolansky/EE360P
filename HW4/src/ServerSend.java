@@ -19,7 +19,8 @@ public class ServerSend implements Runnable {
 	@Override
 	public void run() {
 		try {
-			CustomServer server = Server.ServerList.getCustomServerList().stream().filter(s -> s.getID() == serverID).findFirst().get();
+			CustomServer server = Server.ServerList.getServerByID(serverID);
+
 			Socket sock = new Socket();
 			sock.connect(new InetSocketAddress(server.getUri().getHost() , server.getUri().getPort()),Client.timeout);
 			sock.setSoTimeout(Client.timeout);
