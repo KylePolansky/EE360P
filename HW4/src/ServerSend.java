@@ -18,9 +18,8 @@ public class ServerSend implements Runnable {
 
 	@Override
 	public void run() {
-		CustomServer server = Server.ServerList.getCustomServerList().stream().filter(s -> s.getID() == serverID).findFirst().get();
-
 		try {
+			CustomServer server = Server.ServerList.getCustomServerList().stream().filter(s -> s.getID() == serverID).findFirst().get();
 			Socket sock = new Socket();
 			sock.connect(new InetSocketAddress(server.getUri().getHost() , server.getUri().getPort()),Client.timeout);
 			sock.setSoTimeout(Client.timeout);
@@ -58,7 +57,7 @@ public class ServerSend implements Runnable {
 
 		} catch (IOException e) {
 			if (Server.debug) System.out.println("DEBUG: Cannot Connect to server " + e.getStackTrace());
-			Server.ServerList.SetServerCrashed(server.getID());
+			Server.ServerList.SetServerCrashed(serverID);
 
 			switch (commandType) {
 				case REQUEST:
@@ -69,6 +68,8 @@ public class ServerSend implements Runnable {
 					break;
 			}
 		}
-
+		catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 }

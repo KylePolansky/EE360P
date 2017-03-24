@@ -30,6 +30,7 @@ class CustomServerList {
 				.forEach(s -> new Thread(new ServerSend(s.getID(), finalCommand, ServerSendType.REQUEST)).start());
 
 		while (requestsNeeded > requestResponses.get()) {
+			Thread.yield();
 		}
 		return requestCanEnter;
 	}
