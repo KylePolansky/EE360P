@@ -10,7 +10,7 @@ class CustomServerList {
 		this.customServerList = customServerList;
 	}
 
-	public synchronized ArrayList<CustomServer> getCustomServerList() {
+	public ArrayList<CustomServer> getCustomServerList() {
 		return customServerList;
 	}
 
@@ -25,7 +25,7 @@ class CustomServerList {
 		return null;
 	}
 
-	public synchronized void SetServerCrashed(int serverID) {
+	public void SetServerCrashed(int serverID) {
 		getCustomServerList().stream().filter(s -> s.getID() == serverID).findFirst().get().setCrashed(true);
 	}
 

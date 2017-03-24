@@ -20,7 +20,6 @@ public class Client {
 		}
 
 		ClientNetworking cn = new ClientNetworking(serverList);
-		cn.Connect();
 
 		while (sc.hasNextLine()) {
 			String cmd = sc.nextLine();
@@ -31,7 +30,7 @@ public class Client {
 				case "cancel":
 				case "search":
 				case "list":
-					cn.Send(cmd);
+					while (!cn.Send(cmd));
 					break;
 				default:
 					System.out.println("ERROR: No such command");
@@ -42,147 +41,58 @@ public class Client {
 	static class ClientNetworking {
 		static ArrayList<URI> serverList;
 		static int serverToUse;
-		static Socket clientSocket;
-		static DataOutputStream outStream;
-		static int responseReceived; // 0 = no response, 1 = need to resend, 2 = got response.
-		private static Thread TCPListenerThread;
 
 		public ClientNetworking(ArrayList<URI> servers) {
 			serverList = servers;
 			serverToUse = 0;
-			responseReceived = 0;
 		}
 
-		public static void Connect() throws IOException {
-			TCPListenerThread = new Thread(new TCPListener());
-			TCPListenerThread.start();
-			while (clientSocket == null || !clientSocket.isConnected());
-			SendKeepAlive();
-		}
+		static synchronized boolean Send(String cmd) throws IOException {
 
-		static synchronized void Send(String cmd) {
-			new Thread(new SendThread(cmd)).start();
-		}
+			Socket clientSocket;
+			BufferedReader reader;
+			DataOutputStream outStream;
 
-		//TODO: This should be synchronized somehow.
-		static class SendThread implements Runnable {
-			private String cmd;
-
-			public SendThread(String cmd) {
-				this.cmd = cmd;
+			try {
+				clientSocket = new Socket();
+				if (debug) System.out.println("DEBUG: Trying to connect to server: " + serverToUse);
+				if (debug) System.out.println("DEBUG: Host: " + serverList.get(serverToUse).getHost());
+				if (debug) System.out.println("DEBUG: Port: " + serverList.get(serverToUse).getPort());
+				clientSocket.connect(new InetSocketAddress(serverList.get(serverToUse).getHost(), serverList.get(serverToUse).getPort()), timeout);
+				if (debug) System.out.println("DEBUG: Connected to server: " + serverToUse);
+				clientSocket.setSoTimeout(timeout);
+				if (debug) System.out.println("DEBUG: Setting input reader on server: " + serverToUse);
+				reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+				if (debug) System.out.println("DEBUG: Setting output reader on server: " + serverToUse);
+				outStream = new DataOutputStream(clientSocket.getOutputStream());
+			} catch (IOException e) {
+				if (debug) System.out.println("DEBUG: Error in TCPListener.Connect: " + e.getStackTrace());
+				serverToUse = (serverToUse + 1) % serverList.size();
+				return false;
 			}
 
-			@Override
-			public void run() {
-				if (debug && !cmd.equals("keepalive")) System.out.println("DEBUG: Sending TCP Command: " + cmd);
+			outStream.writeBytes(cmd + '\n');
+			outStream.flush();
 
-				responseReceived = 0;
-				while (clientSocket == null || !clientSocket.isConnected()) {
-					try {
-						Connect();
-					} catch (IOException e) {
-						e.printStackTrace();
+			String line;
+			StringBuilder output = new StringBuilder();
+			try {
+				while ((line = reader.readLine()) != null) {
+					line = line.trim();
+					if (line.equals("end")) {
+						System.out.println(output.toString().trim());
+						clientSocket.close();
+						return true;
+					}
+					else {
+						output.append(line+"\n");
 					}
 				}
-				output();
-
-				Thread.yield();
-
-				while (responseReceived != 2) {
-					Thread.yield();
-					if (responseReceived == 1) {
-						output();
-						responseReceived = 0;
-					}
-				}
+			} catch (IOException e) {
+				if (debug)
+					System.out.println("DEBUG: Error in TCPListener Receive, trying new server: " + e.getMessage());
 			}
-
-			private void output() {
-				try {
-					synchronized (outStream) {
-						while (outStream == null);
-						outStream.writeBytes(cmd + '\n');
-						outStream.flush();
-					}
-				} catch (IOException e) {
-					e.printStackTrace();
-					responseReceived = 1;
-					try {
-						Connect();
-					} catch (IOException e1) {
-						e1.printStackTrace();
-					}
-				}
-			}
-		}
-
-		public static synchronized void SendKeepAlive() throws IOException {
-			new Thread(new SendThread("keepalive")).start();
-		}
-
-		static class TCPListener implements Runnable {
-			private static BufferedReader reader;
-
-			@Override
-			public void run() {
-				while (true) {
-					if (clientSocket == null || !clientSocket.isConnected())
-						Connect();
-
-					while (clientSocket != null && clientSocket.isConnected()) {
-						String line;
-						try {
-							while ((line = reader.readLine()) != null && clientSocket != null && clientSocket.isConnected()) {
-								line = line.trim();
-								if (debug && !line.equals("ack"))
-									System.out.println("DEBUG: Received message: " + line);
-
-								responseReceived = 2;
-								if (line.equals("ack")) {
-									SendKeepAlive();
-								} else {
-									System.out.println(line.trim());
-								}
-
-								if (line.equals("end")) {
-									clientSocket.close();
-									return;
-								}
-							}
-						} catch (IOException e) {
-							if (debug)
-								System.out.println("DEBUG: Error in TCPListener Receive, trying new server: " + e.getMessage());
-							clientSocket = null;
-							responseReceived = 1;
-						}
-					}
-				}
-			}
-
-			private synchronized static void Connect() {
-				while (clientSocket == null || !clientSocket.isConnected()) {
-					try {
-						clientSocket = null;
-						reader = null;
-						outStream = null;
-						int oldServer = serverToUse;
-						serverToUse = (serverToUse + 1) % serverList.size();
-						clientSocket = new Socket();
-						if (debug) System.out.println("DEBUG: Trying to connect to server: " + oldServer);
-						if (debug) System.out.println("DEBUG: Host: " + serverList.get(oldServer).getHost());
-						if (debug) System.out.println("DEBUG: Port: " + serverList.get(oldServer).getPort());
-						clientSocket.connect(new InetSocketAddress(serverList.get(oldServer).getHost(), serverList.get(oldServer).getPort()), timeout);
-						if (debug) System.out.println("DEBUG: Connected to server: " + oldServer);
-						clientSocket.setSoTimeout(timeout);
-						if (debug) System.out.println("DEBUG: Setting input reader on server: " + oldServer);
-						reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-						if (debug) System.out.println("DEBUG: Setting output reader on server: " + oldServer);
-						outStream = new DataOutputStream(clientSocket.getOutputStream());
-					} catch (IOException e) {
-						if (debug) System.out.println("DEBUG: Error in TCPListener.Connect: " + e.getStackTrace());
-					}
-				}
-			}
+			return false;
 		}
 	}
 }
