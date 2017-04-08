@@ -1,3 +1,4 @@
+//EIDS=KPP446,JC82563
 import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
