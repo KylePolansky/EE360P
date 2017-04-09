@@ -28,7 +28,6 @@ import org.apache.hadoop.util.ToolRunner;
  * @author David Franke (dfranke@cs.utexas.edu)
  */
 public class TextAnalyzer extends Configured implements Tool {
-        private static final String SEPARATOR = ";";
         
 	public static class TextMapper extends Mapper<LongWritable, Text, Text, Tuple> {
 
@@ -38,17 +37,29 @@ public class TextAnalyzer extends Configured implements Tool {
 		public void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
 			String line = value.toString();
-                        line=line.replaceAll("[^A-Za-z0-9]", " ").toLowerCase();
+                        line=line.toLowerCase().replaceAll("[^a-z0-9]", " ");
 			StringTokenizer tokenizer = new StringTokenizer(line);
-
-			while (tokenizer.hasMoreTokens()) {
-                            contextWord.set(tokenizer.nextToken());
+                        HashSet<String> words = new HashSet();
+                        while (tokenizer.hasMoreTokens()) {
+                            words.add(tokenizer.nextToken());
+                        }
+                        
+                        for(String word : words)
+                        {
+                            contextWord.set(word);
                             StringTokenizer tokenizer2 = new StringTokenizer(line);
-                            while (tokenizer2.hasMoreTokens()) {
-                                Tuple t = new Tuple(tokenizer2.nextToken(), 1);
-                                context.write(contextWord,t);
+                            boolean selfCounted=false;
+                            while(tokenizer2.hasMoreTokens())
+                            {
+                                String queryWord = tokenizer2.nextToken();
+                                if(!selfCounted && queryWord.equals(contextWord.toString()))
+                                    selfCounted=true;
+                                else{
+                                    Tuple t = new Tuple(queryWord, 1);
+                                    context.write(contextWord,t);
+                                }
                             }
-			}
+                        }
 		}
 	}
         
@@ -105,7 +116,7 @@ public class TextAnalyzer extends Configured implements Tool {
             Configuration conf = this.getConf();
 
             // Create job
-            Job job = Job.getInstance(conf, "EID1_EID2"); // Replace with your EIDs
+            Job job = Job.getInstance(conf, "JC82563_KPP446"); // Replace with your EIDs
                
             //Had to add this line because my hadoop was giving an error
             job.getConfiguration().set("mapreduce.reduce.memory.mb","2048");
