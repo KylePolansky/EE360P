@@ -30,72 +30,69 @@ import org.apache.hadoop.util.ToolRunner;
 public class TextAnalyzer extends Configured implements Tool {
         private static final String SEPARATOR = ";";
         
-	public static class TextMapper extends Mapper<LongWritable, Text, Text, Text> {
+	public static class TextMapper extends Mapper<LongWritable, Text, Text, Tuple> {
 
 		private Text contextWord = new Text();
-                private Text queryWord = new Text();
 
 		@Override
 		public void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
 			String line = value.toString();
-                        line=line.toLowerCase().replaceAll("[^A-Za-z0-9]", " ");
+                        line=line.replaceAll("[^A-Za-z0-9]", " ").toLowerCase();
 			StringTokenizer tokenizer = new StringTokenizer(line);
 
 			while (tokenizer.hasMoreTokens()) {
                             contextWord.set(tokenizer.nextToken());
                             StringTokenizer tokenizer2 = new StringTokenizer(line);
-                            HashSet<String> wordSet = new HashSet();
                             while (tokenizer2.hasMoreTokens()) {
-                                queryWord.set(tokenizer2.nextToken()+SEPARATOR+"1");
-                                context.write(contextWord,queryWord);
+                                Tuple t = new Tuple(tokenizer2.nextToken(), 1);
+                                context.write(contextWord,t);
                             }
 			}
 		}
 	}
         
-        private static Map<String,Integer> collectWordMap(Iterable<Text> values){
-            TreeMap<String,Integer> words = new TreeMap();
-            for (Text value : values) {
-                String contextword = value.toString().split(SEPARATOR)[0];
-                int nextCount = Integer.parseInt(value.toString().split(SEPARATOR)[1]);
-                Integer count = words.get(contextword);
-                if(count==null)
-                    count=0;
-                count+=nextCount;
-                words.put(contextword, count);
+        private static Map<String,Tuple> collectWordMap(Iterable<Tuple> values){
+            Map<String,Tuple> words = new TreeMap();
+            for (Tuple value : values) {
+                Tuple prevTuple = words.get(value.getWord());
+                if(prevTuple==null)
+                    prevTuple=new Tuple(value);
+                else
+                    prevTuple.increment(value.getCount());
+                words.put(prevTuple.getWord(),prevTuple);
             }
             return words;
         }
         
-        public static class TextCombiner extends Reducer<Text, Text, Text, Text> {
+        public static class TextCombiner extends Reducer<Text, Tuple, Text, Tuple> {
 
 		@Override
-		public void reduce(Text key, Iterable<Text> values, Context context)
+		public void reduce(Text key, Iterable<Tuple> values, Context context)
 				throws IOException, InterruptedException {
-                    Map<String,Integer> words = collectWordMap(values);
+                    Map<String,Tuple> words = collectWordMap(values);
                     
-                    for (Entry<String,Integer> e : words.entrySet())
+                    for (Tuple t : words.values())
                     {
-                        context.write(new Text(key), new Text(e.getKey()+SEPARATOR+e.getValue()));
+                        context.write(new Text(key), t);
                     }
                 }
         }
 
-	public static class TextReducer extends Reducer<Text, Text, Text, Text> {
+	public static class TextReducer extends Reducer<Text, Tuple, Text, Text> {
 
 		@Override
-		public void reduce(Text key, Iterable<Text> values, Context context)
+		public void reduce(Text key, Iterable<Tuple> values, Context context)
 				throws IOException, InterruptedException {
-			Map<String,Integer> words = collectWordMap(values);
+			Map<String,Tuple> words = collectWordMap(values);
                         
                         StringBuilder resultSb = new StringBuilder();
-                        for(Entry<String,Integer> e : words.entrySet())
+                        for(Tuple t : words.values())
                         {
                             resultSb.append("\n<");
-                            resultSb.append(e.getKey());
+                            resultSb.append(t.getWord());
                             resultSb.append(", ");
-                            resultSb.append(e.getValue());
+                            resultSb.append(t.getCount());
                             resultSb.append(">");
                         }
                         resultSb.append("\n");
@@ -127,8 +124,8 @@ public class TextAnalyzer extends Configured implements Tool {
             job.setOutputValueClass(Text.class);
             //   If your mapper and combiner's  output types are different from Text.class,
             //   then uncomment the following lines to specify the data types.
-            //job.setMapOutputKeyClass(?.class);
-            //job.setMapOutputValueClass(?.class);
+            job.setMapOutputKeyClass(Text.class);
+            job.setMapOutputValueClass(Tuple.class);
 
             // Input
             FileInputFormat.addInputPath(job, new Path(args[0]));

@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
 
         int general_chunk_size = N / world_size;
         lines = (int *)malloc(world_size*sizeof(int *));
-        for (int i=0; i<world_size-1; i++)
+        for (i=0; i<world_size-1; i++)
         {
             lines[i]=general_chunk_size;
         }
@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
     if(world_rank == 0)
     {
         snd_counts=malloc(world_size*sizeof(int));
-        for(int i=0; i<world_size; i++)
+        for(i=0; i<world_size; i++)
             snd_counts[i]=M*lines[i];
 
         mat_offsets = (int *)malloc(world_size*sizeof(int));
