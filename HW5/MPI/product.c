@@ -81,19 +81,12 @@ int main(int argc, char** argv) {
 
     int *mat=malloc(M*chunk_size*sizeof(int*));
     MPI_Scatterv( mat_send, snd_counts, mat_offsets, MPI_INT, mat, M*chunk_size, MPI_INT, 0, MPI_COMM_WORLD);
-
-    //DEBUG:
-    char buff[500];
-    sprintf(buff,"DEBUG: Process #%d. Chunk size=%d. Matrix:\n", world_rank, chunk_size);
-
-    for(i=0; i<chunk_size*M; i++)
+    if(world_rank == 0)
     {
-        sprintf(buff, "%s%d ", buff, mat[i]);
-        if((i+1)%M==0)
-            sprintf(buff, "%s\n", buff);
+        free(mat_send);
+        free(mat_offsets);
+        free(snd_counts);
     }
-    printf("%s\n", buff);
-    //END OF DEBUG
 
     //Compute product
     int *res = computeProduct(mat,v,chunk_size,M);
@@ -116,6 +109,9 @@ int main(int argc, char** argv) {
 
     MPI_Gatherv(res, chunk_size, MPI_INT, final_results, lines, final_offsets, MPI_INT, 0, MPI_COMM_WORLD);
     
+    free(res);
+    if(world_rank==0) free(final_offsets);
+
     //Print results to file
     if (world_rank==0)
         printVectorToFile(final_results,N,"results.txt");
@@ -140,7 +136,7 @@ int readVectorFromFile(int ** v, FILE *file)
 {
     int i=0;
 
-    int *temp=malloc(1000*sizeof(int));
+    int *temp=malloc(1000*1000*sizeof(int));
 
     while(fscanf(file, "%d", &temp[i]) != EOF)
     {
