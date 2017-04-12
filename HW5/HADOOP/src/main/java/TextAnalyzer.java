@@ -1,5 +1,3 @@
-
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -22,11 +20,6 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-/**
- * Example MapReduce program that performs word count.
- *
- * @author David Franke (dfranke@cs.utexas.edu)
- */
 public class TextAnalyzer extends Configured implements Tool {
         
 	public static class TextMapper extends Mapper<LongWritable, Text, Text, Tuple> {
